@@ -7,9 +7,7 @@ import type {
   DashboardStats,
 } from '../types';
 
-const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ??
-  (import.meta.env.PROD ? 'https://hrms-lite-druf.onrender.com/api' : 'http://localhost:3001/api');
+const BASE_URL = 'https://hrms-lite-druf.onrender.com';
 
 export const hrmsApi = createApi({
   reducerPath: 'hrmsApi',
