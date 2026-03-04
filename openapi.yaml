@@ -1,0 +1,219 @@
+openapi: 3.0.3
+info:
+  title: HRMS Lite API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3001/api
+paths:
+  /employees:
+    get:
+      summary: List employees
+      parameters:
+        - name: search
+          in: query
+          description: Filter by employeeId or fullName (case-insensitive, min 2 chars)
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Employee' } }
+                  total: { type: integer }
+    post:
+      summary: Add employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Employee' }
+        '400':
+          description: Validation error or employeeId exists
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /employees/{id}:
+    get:
+      summary: Get single employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Employee' }
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    patch:
+      summary: Update employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName: { type: string }
+                email: { type: string }
+                department: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Employee' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      summary: Soft-delete employee (sets deletedAt; record is excluded from list/get/stats)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: No content
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /attendance:
+    get:
+      summary: List attendance
+      parameters:
+        - name: employeeId
+          in: query
+          schema: { type: string }
+        - name: date
+          in: query
+          description: Filter by date (YYYY-MM-DD)
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Attendance' } }
+                  total: { type: integer }
+    post:
+      summary: Mark attendance (upsert by employeeId + date)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AttendanceInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attendance' }
+        '200':
+          description: Updated existing record
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attendance' }
+        '400':
+          description: Validation error or employee not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /dashboard/stats:
+    get:
+      summary: Dashboard summary (server date used for today)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalEmployees: { type: integer }
+                  totalAttendanceRecords: { type: integer }
+                  todayPresentCount: { type: integer }
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  db: { type: string, example: connected }
+                  timestamp: { type: string, format: date-time }
+components:
+  schemas:
+    Employee:
+      type: object
+      properties:
+        _id: { type: string }
+        employeeId: { type: string }
+        fullName: { type: string }
+        email: { type: string }
+        department: { type: string }
+    EmployeeInput:
+      type: object
+      required: [employeeId, fullName, email, department]
+      properties:
+        employeeId: { type: string, description: "e.g. EMP001" }
+        fullName: { type: string }
+        email: { type: string }
+        department: { type: string }
+    Attendance:
+      type: object
+      properties:
+        _id: { type: string }
+        employeeId: { type: string }
+        date: { type: string, format: date }
+        status: { type: string, enum: [Present, Absent] }
+    AttendanceInput:
+      type: object
+      required: [employeeId, date, status]
+      properties:
+        employeeId: { type: string }
+        date: { type: string, format: date }
+        status: { type: string, enum: [Present, Absent] }
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+        code: { type: string }
+        errors: { type: object, additionalProperties: { type: string } }
